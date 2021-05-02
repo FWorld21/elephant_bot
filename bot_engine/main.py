@@ -1,7 +1,7 @@
 import os
 import json
 import telebot
-from bot_modules.ru_lang import Russian
+from ru_lang import Russian
 
 with open('./bot_settings/api.txt', 'r') as bot_api_file:
     bot = telebot.TeleBot(bot_api_file.read())
@@ -20,6 +20,8 @@ def init_user_files(message):
         'cart': {
             # food: count
         },
+        'selected_category': None,
+        'selected_product': None,
         'step': 'menu',
     }
     if not os.path.exists('./users_files/'):
@@ -47,6 +49,23 @@ def set_location_value(lat, long, message):
         data = json.load(config_file_r)
     data['location']['lat'] = lat
     data['location']['long'] = long
+    with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+        json.dump(data, config_file_w)
+
+
+def check_product_in_basket(product, message):
+    with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+        data = json.load(config_file_r)
+    if product in data['cart']:
+        return True
+    else:
+        return False
+
+
+def add_to_basket(product, count, message):
+    with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+        data = json.load(config_file_r)
+    data['cart'][product] = count
     with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
         json.dump(data, config_file_w)
 
@@ -80,11 +99,38 @@ def get_msg_from_user(message):
         set_config_value(key='step', value='main_menu', message=message)
         ru_object.main_menu()
 
-    # Menu section
+    # Categories section
     if msg_from_user == '🍜 Меню' and show_config_value(key='step', message=message) == 'main_menu' \
             and show_config_value(key='language', message=message) == 'ru':
+        set_config_value(key='step', value='category_menu', message=message)
+        ru_object.show_categories()
+
+    # Products section
+    if msg_from_user in ru_object.ru_categories and show_config_value(key='step', message=message) == 'category_menu' \
+            and show_config_value(key='language', message=message) == 'ru':
         set_config_value(key='step', value='product_menu', message=message)
-        ru_object.show_menu()
+        set_config_value(key='selected_category', value=msg_from_user, message=message)
+        ru_object.show_products(_category=msg_from_user)
+
+    # Product preview section
+    if msg_from_user in ru_object.ru_products and show_config_value(key='step', message=message) == 'product_menu' \
+            and show_config_value(key='language', message=message) == 'ru':
+        if check_product_in_basket(product=msg_from_user, message=message):
+            ru_object.error_add_to_basket(product=msg_from_user,
+                                          category=show_config_value(key='selected_category', message=message))
+        else:
+            set_config_value(key='step', value='product_preview', message=message)
+            set_config_value(key='selected_product', value=msg_from_user, message=message)
+            ru_object.show_product_preview()
+
+    # Product num count section
+    if show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'product_preview':
+        if msg_from_user in [str(i) for i in range(1, 100)]:
+            add_to_basket(product=show_config_value(key='selected_product', message=message), count=msg_from_user,
+                          message=message)
+            set_config_value(key='step', value='category_menu', message=message)
+            ru_object.added_to_basket(product=show_config_value(key='selected_product', message=message))
 
     # Contacts section
     if msg_from_user == '☎ Контакты' and show_config_value(key='step', message=message) == 'main_menu' \
@@ -95,7 +141,7 @@ def get_msg_from_user(message):
     if msg_from_user == '🛒 Корзина' and show_config_value(key='step', message=message) == 'main_menu' \
             and show_config_value(key='language', message=message) == 'ru':
         set_config_value(key='step', value='basket_look', message=message)
-        ru_object.show_basket()
+        ru_object.show_basket(cart=show_config_value(key='cart', message=message))
 
     # Info section
     if msg_from_user == '❔ Информация' and show_config_value(key='step', message=message) == 'main_menu' \
@@ -126,7 +172,7 @@ def get_msg_from_user(message):
         ru_object.show_invalid_phone()
     elif show_config_value(key='step', message=message) == 'confirm_phone_change' and len(msg_from_user) > 6 \
             or show_config_value(key='step', message=message) == 'new_phone_set' and len(msg_from_user) > 6 \
-            and show_config_value(key='language', message=message) == 'ru':
+            and show_config_value(key='language', message=message) == 'ru' and msg_from_user != '◀ Назад':
         try:
             phone = int(msg_from_user)
             set_config_value(key='step', value='settings', message=message)
@@ -168,6 +214,32 @@ def get_msg_from_user(message):
         #uz_object.main_menu()
 
 
+    # Go back section
+    if show_config_value('step', message=message) == 'category_menu' and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='main_menu', message=message)
+        ru_object.main_menu()
+    elif show_config_value('step', message=message) == 'product_menu' and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='category_menu', message=message)
+        ru_object.show_categories()
+    elif show_config_value('step', message=message) == 'settings' and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='main_menu', message=message)
+        ru_object.main_menu()
+    elif show_config_value('step', message=message) == 'new_phone_set' and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='settings', message=message)
+        ru_object.show_settings()
+    elif show_config_value('step', message=message) == 'new_location_set' and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='settings', message=message)
+        ru_object.show_settings()
+
+
+
+
+
 @bot.message_handler(content_types=['contact'])
 def contact_handler(message):
     set_config_value(key='step', value='new_phone_set', message=message)
@@ -188,6 +260,17 @@ def location_handler(message):
             set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
             set_config_value(key='step', value='settings', message=message)
             ru_object.save_location()
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler(call):
+    if call.data[-1] in [str(i) for i in range(1, 10)]:
+        if show_config_value(key='language', message=call.message) == 'ru' \
+                and show_config_value(key='step', message=call.message) == 'product_preview':
+            ru_object = Russian(bot=bot, message=call.message)
+            add_to_basket(product=call.data[:-1], count=call.data[-1], message=call.message)
+            set_config_value(key='step', value='category_menu', message=call.message)
+            ru_object.added_to_basket(product=call.data[:-1])
 
 
 bot.polling()
