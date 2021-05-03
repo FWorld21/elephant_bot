@@ -1,3 +1,5 @@
+import json
+
 import telebot
 from get_db_content import DBContent
 from geopy.geocoders import Nominatim
@@ -144,6 +146,8 @@ class Russian:
 
     def confirm_order(self, cart):
         buttons = ['✅ Подтверить заказ', '💭 Оставить коментарий к заказу', '◀ Назад']
+        with open(f'./users_files/{self.message.chat.id}/config.json', 'r') as config_file_r:
+            data = json.load(config_file_r)
         products_with_price = {
             # Product: Price
         }
@@ -153,16 +157,28 @@ class Russian:
                     products_with_price[cart_product] = product['price']
         main_msg = '<b>Корзина:</b>\n'
         ended_amount = 0
-        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(buttons[0])
-        markup.add(buttons[1])
-        markup.add(buttons[2])
         for product, price in products_with_price.items():
             main_msg += f'\n<i>{product}</i>' \
                         f'\n{cart[product]} x {price} = <b>{str(int(cart[product]) * int(price))}</b>\n'
             ended_amount += int(cart[product]) * int(price)
         main_msg += f'\n\nИтого:<b>{ended_amount}</b>'
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(buttons[0])
+        if data['comment'] is None:
+            markup.add(buttons[1])
+        else:
+            main_msg += f'\n\nКоментарий к заказу: <b>{data["comment"]}</b>'
+        markup.add(buttons[2])
         self.bot.send_message(chat_id=self.message.chat.id, text=main_msg, reply_markup=markup, parse_mode='html')
+
+    def wait_for_comment(self):
+        msg = 'Отправьте коментарий к вашему заказу'
+        markup = telebot.types.ReplyKeyboardRemove()
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg, reply_markup=markup)
+
+    def comment_saved(self):
+        msg = 'Ваш коментарий успешно сохранён'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     # Contacts section
     def show_contacts(self):

@@ -21,6 +21,7 @@ def init_user_files(message):
         'cart': {
             # food: count
         },
+        'comment': None,
         'selected_category': None,
         'selected_product': None,
         'step': 'menu',
@@ -236,6 +237,19 @@ def get_msg_from_user(message):
             and show_config_value(key='step', message=message) == 'order_step_2':
         set_config_value(key='step', value='order_step_3', message=message)
         ru_object.confirm_order(cart=show_config_value(key='cart', message=message))
+    elif msg_from_user == '💭 Оставить коментарий к заказу' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'order_step_3':
+        set_config_value(key='step', value='leave_comment', message=message)
+        ru_object.wait_for_comment()
+    elif show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'leave_comment':
+        set_config_value(key='comment', value=msg_from_user, message=message)
+        ru_object.comment_saved()
+        set_config_value(key='step', value='order_step_3', message=message)
+        ru_object.confirm_order(cart=show_config_value(key='cart', message=message))
+
+
 
     # Info section
     if msg_from_user == '❔ Информация' and show_config_value(key='step', message=message) == 'main_menu' \
