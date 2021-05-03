@@ -94,7 +94,7 @@ class Russian:
                     self.bot.send_message(chat_id=self.message.chat.id, text=msg, reply_markup=markup,
                                           parse_mode='html')
 
-    # Basket section
+    # Cart section
     def added_to_basket(self, product):
         msg = f'Блюдо <b>{product}</b> успешно добавлено в корзину!'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, parse_mode='html')
@@ -105,11 +105,8 @@ class Russian:
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, parse_mode='html')
         self.show_products(category)
 
-    def show_contacts(self):
-        msg = ''
-        pass
-
     def show_basket(self, cart):
+        buttons = ['🔥 Очистить корзину', '🗒 Оформить заказ']
         products_with_price = {
             # Product: Price
         }
@@ -117,10 +114,62 @@ class Russian:
             for product in self.products:
                 if cart_product == product['ru_name']:
                     products_with_price[cart_product] = product['price']
-        print(products_with_price)
+        main_msg = '<b>Корзина:</b>\n'
+        ended_amount = 0
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(buttons[0], buttons[1])
+        for product, price in products_with_price.items():
+            markup.add(f'❌ {product} {cart[product]} шт.')
+            main_msg += f'\n<i>{product}</i>' \
+                        f'\n{cart[product]} x {price} = <b>{str(int(cart[product]) * int(price))}</b>\n'
+            ended_amount += int(cart[product]) * int(price)
+        markup.add('◀ Назад')
+        main_msg += f'\n\nИтого:<b>{ended_amount}</b>'
+        msg = 'Нажмите на блюдо, чтобы <b>удалить</b> его из корзины'
+        self.bot.send_message(chat_id=self.message.chat.id, text=main_msg, parse_mode='html')
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg, parse_mode='html', reply_markup=markup)
 
+    def show_empty_basket(self):
+        msg = 'Ваша корзина пуста!'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
+    def burn_basket(self):
+        msg = 'Ваша корзина успешно очищена!'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg)
+        self.main_menu()
 
+    def item_from_cart_deleted(self, product):
+        msg = f'Блюдо "<b>{product}</b>" успешно удалено из корзины'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg, parse_mode='html')
+
+    def confirm_order(self, cart):
+        buttons = ['✅ Подтверить заказ', '💭 Оставить коментарий к заказу', '◀ Назад']
+        products_with_price = {
+            # Product: Price
+        }
+        for cart_product in cart:
+            for product in self.products:
+                if cart_product == product['ru_name']:
+                    products_with_price[cart_product] = product['price']
+        main_msg = '<b>Корзина:</b>\n'
+        ended_amount = 0
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(buttons[0])
+        markup.add(buttons[1])
+        markup.add(buttons[2])
+        for product, price in products_with_price.items():
+            main_msg += f'\n<i>{product}</i>' \
+                        f'\n{cart[product]} x {price} = <b>{str(int(cart[product]) * int(price))}</b>\n'
+            ended_amount += int(cart[product]) * int(price)
+        main_msg += f'\n\nИтого:<b>{ended_amount}</b>'
+        self.bot.send_message(chat_id=self.message.chat.id, text=main_msg, reply_markup=markup, parse_mode='html')
+
+    # Contacts section
+    def show_contacts(self):
+        msg = ''
+        pass
+
+    # About restaurant info
     def show_info(self):
         msg = '🕘 Часы работы зведения и службы доставки: ежедневно, 9:00 - 2:00 (без выходных);'\
               '\n\n👲🏼 Стоимость доставки по Ташкенту - 20 000 сум;'\
@@ -135,14 +184,16 @@ class Russian:
         markup.add(buttons[2], buttons[3])
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, reply_markup=markup)
 
+    # Phone settings section
     def confirm_change_phone(self, phone):
         buttons = ['📱 Оставить указанный номер',
-                   telebot.types.KeyboardButton('📱 Поделиться своим номером', request_contact=True)]
+                   telebot.types.KeyboardButton('📱 Поделиться своим номером', request_contact=True), '◀ Назад']
         msg = f'Ваш номер телефона - {phone}\n\n' \
               f'Если вы хотите его поменять, пришлите мне другой номер'
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(buttons[0])
         markup.add(buttons[1])
+        markup.add(buttons[2])
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, reply_markup=markup)
 
     def show_invalid_phone(self):
@@ -152,7 +203,6 @@ class Russian:
     def save_phone(self):
         msg = 'Ваш номер телефона успешно установлен'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
-        self.show_settings()
 
     def ask_new_phone(self):
         buttons = [telebot.types.KeyboardButton('📱 Поделиться своим номером', request_contact=True), '◀ Назад']
@@ -165,7 +215,7 @@ class Russian:
     # Location settings section
     def confirm_change_location(self, location):
         buttons = ['🗺 Оставить указанную локацию',
-                   telebot.types.KeyboardButton('🗺 Поделиться своей локацией', request_location=True)]
+                   telebot.types.KeyboardButton('🗺 Поделиться своей локацией', request_location=True), '◀ Назад']
 
         geolocator = Nominatim(user_agent="elephant_bot")
         location = geolocator.reverse(f'{location["lat"]}, {location["long"]}')
@@ -174,11 +224,12 @@ class Russian:
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(buttons[0])
         markup.add(buttons[1])
+        markup.add(buttons[2])
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, reply_markup=markup)
 
     def ask_new_location(self):
         buttons = [telebot.types.KeyboardButton('🗺 Поделиться своей локацией', request_location=True), '◀ Назад']
-        msg = 'У вас не указан адрес, вы хотите указать его??'
+        msg = 'У вас не указан адрес, вы хотите указать его?'
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(buttons[0])
         markup.add(buttons[1])
@@ -191,8 +242,8 @@ class Russian:
               f'\n<b>{location.address}</b>' \
               f'\nуспешно установлена'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, parse_mode='html')
-        self.show_settings()
 
+    # Language settings section
     def confirm_change_language(self):
         buttons = ['🇷🇺 Оставить русский', '🇺🇿 Изменить на O\'zbek']
         msg = 'У вас установлен язык: 🇷🇺 Русский'

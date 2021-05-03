@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import telebot
 from ru_lang import Russian
@@ -70,10 +71,43 @@ def add_to_basket(product, count, message):
         json.dump(data, config_file_w)
 
 
+def burn_basket(message):
+    with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+        data = json.load(config_file_r)
+    products = []
+    for product in data['cart']:
+        products.append(product)
+    for product in products:
+        del data['cart'][product]
+    with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+        json.dump(data, config_file_w)
+
+
 def show_config_value(key, message):
     with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
         data = json.load(config_file_r)
     return data[key]
+
+
+def del_item_from_basket(item, message):
+    try:
+        digit = re.search('\\d\\d', item)
+        product = item.replace('❌ ', '').replace(' шт.', '').replace(f' {digit.group(0)}', '')
+        with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+            data = json.load(config_file_r)
+        del data['cart'][product]
+        with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+            json.dump(data, config_file_w)
+        return product
+    except AttributeError:
+        digit = re.search('\\d', item)
+        product = item.replace('❌ ', '').replace(' шт.', '').replace(f' {digit.group(0)}', '')
+        with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+            data = json.load(config_file_r)
+        del data['cart'][product]
+        with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+            json.dump(data, config_file_w)
+        return product
 
 
 @bot.message_handler(commands=["start"])
@@ -140,8 +174,68 @@ def get_msg_from_user(message):
     # Basket section
     if msg_from_user == '🛒 Корзина' and show_config_value(key='step', message=message) == 'main_menu' \
             and show_config_value(key='language', message=message) == 'ru':
-        set_config_value(key='step', value='basket_look', message=message)
-        ru_object.show_basket(cart=show_config_value(key='cart', message=message))
+        if len(show_config_value(key='cart', message=message)) == 0:
+            ru_object.show_empty_basket()
+        else:
+            set_config_value(key='step', value='basket_look', message=message)
+            ru_object.show_basket(cart=show_config_value(key='cart', message=message))
+
+    if msg_from_user == '🔥 Очистить корзину' and show_config_value(key='step', message=message) == 'basket_look' \
+            and show_config_value(key='language', message=message) == 'ru':
+        burn_basket(message=message)
+        set_config_value(key='step', value='main_menu', message=message)
+        ru_object.burn_basket()
+
+    if msg_from_user[0] == '❌' and msg_from_user[-3:] == 'шт.' \
+            and show_config_value(key='step', message=message) == 'basket_look' \
+            and show_config_value(key='language', message=message) == 'ru':
+        ru_object.item_from_cart_deleted(product=del_item_from_basket(item=msg_from_user, message=message))
+        if len(show_config_value(key='cart', message=message)) == 0:
+            ru_object.show_empty_basket()
+            ru_object.main_menu()
+            set_config_value(key='step', value='main_menu', message=message)
+        else:
+            ru_object.show_basket(cart=show_config_value(key='cart', message=message))
+            set_config_value(key='step', value='basket_look', message=message)
+
+    # Order section
+    if msg_from_user == '🗒 Оформить заказ' and show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'basket_look':
+        set_config_value(key='step', value='order_step_1', message=message)
+        if show_config_value(key='phone_number', message=message):
+            ru_object.confirm_change_phone(phone=show_config_value(key='phone_number', message=message))
+        else:
+            ru_object.ask_new_phone()
+    elif msg_from_user == '📱 Оставить указанный номер' and show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'order_step_1':
+        set_config_value(key='step', value='order_step_2', message=message)
+        if show_config_value(key='location', message=message)['lat'] is not None:
+            ru_object.confirm_change_location(location=show_config_value(key='location', message=message))
+        else:
+            ru_object.ask_new_location()
+    elif msg_from_user != '◀ Назад' and show_config_value(key='step', message=message) == 'order_step_1' \
+            and len(msg_from_user) > 6 or show_config_value(key='step', message=message) == 'order_step_1' \
+            and len(msg_from_user) > 6 and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user != '◀ Назад':
+        try:
+            phone = int(msg_from_user)
+            set_config_value(key='phone_number', value=phone, message=message)
+            set_config_value(key='step', value='order_step_2', message=message)
+            ru_object.save_phone()
+            if show_config_value(key='location', message=message)['lat'] is not None:
+                ru_object.confirm_change_location(location=show_config_value(key='location', message=message))
+            else:
+                ru_object.ask_new_location()
+        except ValueError:
+            ru_object.show_invalid_phone()
+    elif show_config_value(key='step', message=message) == 'order_step_1' and len(msg_from_user) < 9 \
+            and show_config_value(key='language', message=message) == 'ru' and msg_from_user != '◀ Назад':
+        ru_object.show_invalid_phone()
+    elif msg_from_user == '🗺 Оставить указанную локацию' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'order_step_2':
+        set_config_value(key='step', value='order_step_3', message=message)
+        ru_object.confirm_order(cart=show_config_value(key='cart', message=message))
 
     # Info section
     if msg_from_user == '❔ Информация' and show_config_value(key='step', message=message) == 'main_menu' \
@@ -164,20 +258,23 @@ def get_msg_from_user(message):
         else:
             set_config_value(key='step', value='new_phone_set', message=message)
             ru_object.ask_new_phone()
-    elif msg_from_user == '📱 Оставить указанный номер' and show_config_value(key='language', message=message) == 'ru':
+    elif msg_from_user == '📱 Оставить указанный номер' and show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'confirm_phone_change':
         set_config_value(key='step', value='settings', message=message)
         ru_object.show_settings()
-    elif show_config_value(key='step', message=message) == 'confirm_phone_change' and len(msg_from_user) < 6 \
-            and show_config_value(key='language', message=message) == 'ru':
-        ru_object.show_invalid_phone()
-    elif show_config_value(key='step', message=message) == 'confirm_phone_change' and len(msg_from_user) > 6 \
-            or show_config_value(key='step', message=message) == 'new_phone_set' and len(msg_from_user) > 6 \
+    elif show_config_value(key='step', message=message) == 'confirm_phone_change' and len(msg_from_user) < 9 \
             and show_config_value(key='language', message=message) == 'ru' and msg_from_user != '◀ Назад':
+        ru_object.show_invalid_phone()
+    elif msg_from_user != '◀ Назад' and show_config_value(key='step', message=message) == 'confirm_phone_change' \
+            and len(msg_from_user) > 6 or show_config_value(key='step', message=message) == 'new_phone_set' \
+            and len(msg_from_user) > 6 and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user != '◀ Назад':
         try:
             phone = int(msg_from_user)
             set_config_value(key='step', value='settings', message=message)
             set_config_value(key='phone_number', value=phone, message=message)
             ru_object.save_phone()
+            ru_object.show_settings()
         except ValueError:
             ru_object.show_invalid_phone()
 
@@ -192,7 +289,8 @@ def get_msg_from_user(message):
             set_config_value(key='step', value='new_location_set', message=message)
             ru_object.ask_new_location()
     elif msg_from_user == '🗺 Оставить указанную локацию' \
-            and show_config_value(key='language', message=message) == 'ru':
+            and show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'confirm_location_change':
         set_config_value(key='step', value='settings', message=message)
         ru_object.show_settings()
 
@@ -211,55 +309,106 @@ def get_msg_from_user(message):
         set_config_value(key='step', value='settings', message=message)
         set_config_value(key='language', value='uz', message=message)
         ru_object.success_change_language_to_uzb()
-        #uz_object.main_menu()
-
+        # uz_object.main_menu()
 
     # Go back section
-    if show_config_value('step', message=message) == 'category_menu' and show_config_value(key='language', message=message) == 'ru' \
+    if show_config_value('step', message=message) == 'category_menu' \
+            and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user == '◀ Назад':
         set_config_value(key='step', value='main_menu', message=message)
         ru_object.main_menu()
-    elif show_config_value('step', message=message) == 'product_menu' and show_config_value(key='language', message=message) == 'ru' \
+    elif show_config_value('step', message=message) == 'product_menu' \
+            and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user == '◀ Назад':
         set_config_value(key='step', value='category_menu', message=message)
         ru_object.show_categories()
-    elif show_config_value('step', message=message) == 'settings' and show_config_value(key='language', message=message) == 'ru' \
+    elif show_config_value('step', message=message) == 'settings' \
+            and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user == '◀ Назад':
         set_config_value(key='step', value='main_menu', message=message)
         ru_object.main_menu()
-    elif show_config_value('step', message=message) == 'new_phone_set' and show_config_value(key='language', message=message) == 'ru' \
+    elif show_config_value('step', message=message) == 'new_phone_set' \
+            and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user == '◀ Назад':
         set_config_value(key='step', value='settings', message=message)
         ru_object.show_settings()
-    elif show_config_value('step', message=message) == 'new_location_set' and show_config_value(key='language', message=message) == 'ru' \
+    elif show_config_value('step', message=message) == 'confirm_phone_change' \
+            and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user == '◀ Назад':
         set_config_value(key='step', value='settings', message=message)
         ru_object.show_settings()
-
-
-
+    elif show_config_value('step', message=message) == 'new_location_set' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='settings', message=message)
+        ru_object.show_settings()
+    elif show_config_value('step', message=message) == 'basket_look' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='main_menu', message=message)
+        ru_object.main_menu()
+    elif show_config_value('step', message=message) == 'order_step_1' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='basket_look', message=message)
+        ru_object.show_basket(cart=show_config_value(key='cart', message=message))
+    elif show_config_value('step', message=message) == 'order_step_2' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='order_step_1', message=message)
+        ru_object.confirm_change_phone(phone=show_config_value(key='phone_number', message=message))
+    elif show_config_value('step', message=message) == 'order_step_3' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='order_step_2', message=message)
+        ru_object.confirm_change_location(location=show_config_value(key='location', message=message))
 
 
 @bot.message_handler(content_types=['contact'])
 def contact_handler(message):
-    set_config_value(key='step', value='new_phone_set', message=message)
-    if show_config_value(key='language', message=message) == 'ru':
+    if show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'new_phone_set':
         ru_object = Russian(bot=bot, message=message)
         if show_config_value(key='step', message=message) == 'new_phone_set':
             set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
             set_config_value(key='step', value='settings', message=message)
             ru_object.save_phone()
+            ru_object.show_settings()
+    if show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'order_step_1':
+        ru_object = Russian(bot=bot, message=message)
+        if show_config_value(key='step', message=message) == 'new_phone_set':
+            set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
+            set_config_value(key='step', value='settings', message=message)
+            ru_object.save_phone()
+            ru_object.show_settings()
+        elif show_config_value(key='step', message=message) == 'order_step_1':
+            set_config_value(key='step', value='order_step_2', message=message)
+            set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
+            ru_object.save_phone()
+            if show_config_value(key='location', message=message)['lat'] is not None:
+                ru_object.confirm_change_location(location=show_config_value(key='location', message=message))
+            else:
+                ru_object.ask_new_location()
 
 
 @bot.message_handler(content_types=['location'])
 def location_handler(message):
-    set_config_value(key='step', value='new_location_set', message=message)
-    if show_config_value(key='language', message=message) == 'ru':
+    if show_config_value(key='language', message=message) == 'ru' and \
+            show_config_value(key='step', message=message) == 'new_location_set':
         ru_object = Russian(bot=bot, message=message)
-        if show_config_value(key='step', message=message) == 'new_location_set':  # Проверка на язык
-            set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
-            set_config_value(key='step', value='settings', message=message)
-            ru_object.save_location()
+        set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        ru_object.save_location()
+        ru_object.show_settings()
+
+    if show_config_value(key='language', message=message) == 'ru' and \
+            show_config_value(key='step', message=message) == 'order_step_2':
+        ru_object = Russian(bot=bot, message=message)
+        set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
+        set_config_value(key='step', value='order_step_3', message=message)
+        ru_object.save_location()
+        ru_object.confirm_order(cart=show_config_value(key='cart', message=message))
 
 
 @bot.callback_query_handler(func=lambda call: True)
