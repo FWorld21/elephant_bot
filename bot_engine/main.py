@@ -3,6 +3,7 @@ import re
 import json
 import telebot
 from ru_lang import Russian
+from uz_lang import Uzbek
 
 with open('./bot_settings/api.txt', 'r') as bot_api_file:
     bot = telebot.TeleBot(bot_api_file.read())
@@ -90,25 +91,46 @@ def show_config_value(key, message):
     return data[key]
 
 
-def del_item_from_basket(item, message):
-    try:
-        digit = re.search('\\d\\d', item)
-        product = item.replace('❌ ', '').replace(' шт.', '').replace(f' {digit.group(0)}', '')
-        with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
-            data = json.load(config_file_r)
-        del data['cart'][product]
-        with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
-            json.dump(data, config_file_w)
-        return product
-    except AttributeError:
-        digit = re.search('\\d', item)
-        product = item.replace('❌ ', '').replace(' шт.', '').replace(f' {digit.group(0)}', '')
-        with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
-            data = json.load(config_file_r)
-        del data['cart'][product]
-        with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
-            json.dump(data, config_file_w)
-        return product
+def del_item_from_basket(item, message, lang):
+    if lang == 'ru':
+        try:
+            digit = re.search('\\d\\d', item)
+            product = item.replace('❌ ', '').replace(' шт.', '').replace(f' {digit.group(0)}', '')
+            with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+                data = json.load(config_file_r)
+            del data['cart'][product]
+            with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+                json.dump(data, config_file_w)
+            return product
+        except AttributeError:
+            digit = re.search('\\d', item)
+            product = item.replace('❌ ', '').replace(' шт.', '').replace(f' {digit.group(0)}', '')
+            with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+                data = json.load(config_file_r)
+            del data['cart'][product]
+            with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+                json.dump(data, config_file_w)
+            return product
+    elif lang == 'uz':
+        try:
+            digit = re.search('\\d\\d', item)
+            product = item.replace('❌ ', '').replace(' dona', '').replace(f' {digit.group(0)}', '')
+            with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+                data = json.load(config_file_r)
+            del data['cart'][product]
+            with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+                json.dump(data, config_file_w)
+            return product
+        except AttributeError:
+            digit = re.search('\\d', item)
+            product = item.replace('❌ ', '').replace(' dona', '').replace(f' {digit.group(0)}', '')
+            with open(f'./users_files/{message.chat.id}/config.json', 'r') as config_file_r:
+                data = json.load(config_file_r)
+            del data['cart'][product]
+            with open(f'./users_files/{message.chat.id}/config.json', 'w') as config_file_w:
+                json.dump(data, config_file_w)
+            return product
+
 
 
 @bot.message_handler(commands=["start"])
@@ -127,18 +149,27 @@ def start(message):
 def get_msg_from_user(message):
     msg_from_user = message.text.strip()
     ru_object = Russian(bot=bot, message=message)
+    uz_object = Uzbek(bot=bot, message=message)
 
     # Language section
     if msg_from_user == '🇷🇺 Русский':
         set_config_value(key='language', value='ru', message=message)
         set_config_value(key='step', value='main_menu', message=message)
         ru_object.main_menu()
+    elif msg_from_user == '🇺🇿 O\'zbek':
+        set_config_value(key='language', value='uz', message=message)
+        set_config_value(key='step', value='main_menu', message=message)
+        uz_object.main_menu()
 
     # Categories section
     if msg_from_user == '🍜 Меню' and show_config_value(key='step', message=message) == 'main_menu' \
             and show_config_value(key='language', message=message) == 'ru':
         set_config_value(key='step', value='category_menu', message=message)
         ru_object.show_categories()
+    elif msg_from_user == '🍜 Menyu' and show_config_value(key='step', message=message) == 'main_menu' \
+            and show_config_value(key='language', message=message) == 'uz':
+        set_config_value(key='step', value='category_menu', message=message)
+        uz_object.show_categories()
 
     # Products section
     if msg_from_user in ru_object.ru_categories and show_config_value(key='step', message=message) == 'category_menu' \
@@ -146,6 +177,12 @@ def get_msg_from_user(message):
         set_config_value(key='step', value='product_menu', message=message)
         set_config_value(key='selected_category', value=msg_from_user, message=message)
         ru_object.show_products(_category=msg_from_user)
+    elif msg_from_user in uz_object.uz_categories \
+            and show_config_value(key='step', message=message) == 'category_menu' \
+            and show_config_value(key='language', message=message) == 'uz':
+        set_config_value(key='step', value='product_menu', message=message)
+        set_config_value(key='selected_category', value=msg_from_user, message=message)
+        uz_object.show_products(_category=msg_from_user)
 
     # Product preview section
     if msg_from_user in ru_object.ru_products and show_config_value(key='step', message=message) == 'product_menu' \
@@ -157,6 +194,15 @@ def get_msg_from_user(message):
             set_config_value(key='step', value='product_preview', message=message)
             set_config_value(key='selected_product', value=msg_from_user, message=message)
             ru_object.show_product_preview()
+    elif msg_from_user in uz_object.uz_products and show_config_value(key='step', message=message) == 'product_menu' \
+            and show_config_value(key='language', message=message) == 'uz':
+        if check_product_in_basket(product=msg_from_user, message=message):
+            uz_object.error_add_to_basket(product=msg_from_user,
+                                          category=show_config_value(key='selected_category', message=message))
+        else:
+            set_config_value(key='step', value='product_preview', message=message)
+            set_config_value(key='selected_product', value=msg_from_user, message=message)
+            uz_object.show_product_preview()
 
     # Product num count section
     if show_config_value(key='language', message=message) == 'ru' \
@@ -166,6 +212,13 @@ def get_msg_from_user(message):
                           message=message)
             set_config_value(key='step', value='category_menu', message=message)
             ru_object.added_to_basket(product=show_config_value(key='selected_product', message=message))
+    elif show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'product_preview':
+        if msg_from_user in [str(i) for i in range(1, 100)]:
+            add_to_basket(product=show_config_value(key='selected_product', message=message), count=msg_from_user,
+                          message=message)
+            set_config_value(key='step', value='category_menu', message=message)
+            uz_object.added_to_basket(product=show_config_value(key='selected_product', message=message))
 
     # Contacts section
     if msg_from_user == '☎ Контакты' and show_config_value(key='step', message=message) == 'main_menu' \
@@ -180,23 +233,50 @@ def get_msg_from_user(message):
         else:
             set_config_value(key='step', value='basket_look', message=message)
             ru_object.show_basket(cart=show_config_value(key='cart', message=message))
+    elif msg_from_user == '🛒 Savat' and show_config_value(key='step', message=message) == 'main_menu' \
+            and show_config_value(key='language', message=message) == 'uz':
+        if len(show_config_value(key='cart', message=message)) == 0:
+            uz_object.show_empty_basket()
+        else:
+            set_config_value(key='step', value='basket_look', message=message)
+            uz_object.show_basket(cart=show_config_value(key='cart', message=message))
 
     if msg_from_user == '🔥 Очистить корзину' and show_config_value(key='step', message=message) == 'basket_look' \
             and show_config_value(key='language', message=message) == 'ru':
         burn_basket(message=message)
         set_config_value(key='step', value='main_menu', message=message)
         ru_object.burn_basket()
+    elif msg_from_user == '🔥 Savatni b\'oshatish' and show_config_value(key='step', message=message) == 'basket_look' \
+            and show_config_value(key='language', message=message) == 'uz':
+        burn_basket(message=message)
+        set_config_value(key='step', value='main_menu', message=message)
+        uz_object.burn_basket()
 
     if msg_from_user[0] == '❌' and msg_from_user[-3:] == 'шт.' \
             and show_config_value(key='step', message=message) == 'basket_look' \
             and show_config_value(key='language', message=message) == 'ru':
-        ru_object.item_from_cart_deleted(product=del_item_from_basket(item=msg_from_user, message=message))
+        ru_object.item_from_cart_deleted(
+            product=del_item_from_basket(
+                item=msg_from_user, message=message, lang=show_config_value(key='language', message=message)))
         if len(show_config_value(key='cart', message=message)) == 0:
             ru_object.show_empty_basket()
             ru_object.main_menu()
             set_config_value(key='step', value='main_menu', message=message)
         else:
             ru_object.show_basket(cart=show_config_value(key='cart', message=message))
+            set_config_value(key='step', value='basket_look', message=message)
+    elif msg_from_user[0] == '❌' and msg_from_user[-4:] == 'dona' \
+            and show_config_value(key='step', message=message) == 'basket_look' \
+            and show_config_value(key='language', message=message) == 'uz':
+        uz_object.item_from_cart_deleted(
+            product=del_item_from_basket(
+                item=msg_from_user, message=message, lang=show_config_value(key='language', message=message)))
+        if len(show_config_value(key='cart', message=message)) == 0:
+            uz_object.show_empty_basket()
+            uz_object.main_menu()
+            set_config_value(key='step', value='main_menu', message=message)
+        else:
+            uz_object.show_basket(cart=show_config_value(key='cart', message=message))
             set_config_value(key='step', value='basket_look', message=message)
 
     # Order section
@@ -261,6 +341,10 @@ def get_msg_from_user(message):
             and show_config_value(key='language', message=message) == 'ru':
         set_config_value(key='step', value='settings', message=message)
         ru_object.show_settings()
+    if msg_from_user == '🎛 Sozlamalar' and show_config_value(key='step', message=message) == 'main_menu' \
+            and show_config_value(key='language', message=message) == 'uz':
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.show_settings()
 
     # Settings sub-section: Phone number
     if msg_from_user == '📱 Номер телефона' and show_config_value(key='step', message=message) == 'settings' \
@@ -279,7 +363,8 @@ def get_msg_from_user(message):
     elif show_config_value(key='step', message=message) == 'confirm_phone_change' and len(msg_from_user) < 9 \
             and show_config_value(key='language', message=message) == 'ru' and msg_from_user != '◀ Назад':
         ru_object.show_invalid_phone()
-    elif msg_from_user != '◀ Назад' and show_config_value(key='step', message=message) == 'confirm_phone_change' \
+    elif show_config_value(key='language', message=message) == 'ru' and \
+            msg_from_user != '◀ Назад' and show_config_value(key='step', message=message) == 'confirm_phone_change' \
             and len(msg_from_user) > 6 or show_config_value(key='step', message=message) == 'new_phone_set' \
             and len(msg_from_user) > 6 and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user != '◀ Назад':
@@ -291,6 +376,38 @@ def get_msg_from_user(message):
             ru_object.show_settings()
         except ValueError:
             ru_object.show_invalid_phone()
+
+    if msg_from_user == '📱 Telefon raqami' and show_config_value(key='step', message=message) == 'settings' \
+            and show_config_value(key='language', message=message) == 'uz':
+        if show_config_value(key='phone_number', message=message) \
+                and show_config_value(key='language', message=message) == 'uz':
+            set_config_value(key='step', value='confirm_phone_change', message=message)
+            uz_object.confirm_change_phone(phone=show_config_value(key='phone_number', message=message))
+        else:
+            set_config_value(key='step', value='new_phone_set', message=message)
+            uz_object.ask_new_phone()
+    elif msg_from_user == '📱 Ohirgi belgilangan telefon raqamini yuborish' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'confirm_phone_change':
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.show_settings()
+    elif show_config_value(key='step', message=message) == 'confirm_phone_change' and len(msg_from_user) < 9 \
+            and show_config_value(key='language', message=message) == 'uz' and msg_from_user != '◀ Orqaga':
+        uz_object.show_invalid_phone()
+    elif show_config_value(key='language', message=message) == 'uz' and \
+            msg_from_user != '◀ Orqaga' and show_config_value(key='step', message=message) == 'confirm_phone_change' \
+            and len(msg_from_user) > 6 or show_config_value(key='step', message=message) == 'new_phone_set' \
+            and len(msg_from_user) > 6 and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user != '◀ Orqaga':
+        try:
+            phone = int(msg_from_user)
+            set_config_value(key='step', value='settings', message=message)
+            set_config_value(key='phone_number', value=phone, message=message)
+            uz_object.save_phone()
+            uz_object.show_settings()
+        except ValueError:
+            uz_object.show_invalid_phone()
+
 
     # Settings sub-section: Address
     if msg_from_user == '🗺 Адрес' and show_config_value(key='step', message=message) == 'settings' \
@@ -307,6 +424,21 @@ def get_msg_from_user(message):
             and show_config_value(key='step', message=message) == 'confirm_location_change':
         set_config_value(key='step', value='settings', message=message)
         ru_object.show_settings()
+
+    if msg_from_user == '🗺 Manzi' and show_config_value(key='step', message=message) == 'settings' \
+            and show_config_value(key='language', message=message) == 'uz':
+        if show_config_value(key='location', message=message)['lat'] is not None \
+                and show_config_value(key='language', message=message) == 'uz':
+            set_config_value(key='step', value='confirm_location_change', message=message)
+            uz_object.confirm_change_location(location=show_config_value(key='location', message=message))
+        else:
+            set_config_value(key='step', value='new_location_set', message=message)
+            uz_object.ask_new_location()
+    elif msg_from_user == '🗺 Ohirgi belgilangan joylashuvni yuborish' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'confirm_location_change':
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.show_settings()
 
     # Settings sub-section: Language
     if msg_from_user == '🇷🇺 Язык' and show_config_value(key='language', message=message) == 'ru':
@@ -376,6 +508,57 @@ def get_msg_from_user(message):
             and msg_from_user == '◀ Назад':
         set_config_value(key='step', value='order_step_2', message=message)
         ru_object.confirm_change_location(location=show_config_value(key='location', message=message))
+
+    if show_config_value('step', message=message) == 'category_menu' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='main_menu', message=message)
+        uz_object.main_menu()
+    elif show_config_value('step', message=message) == 'product_menu' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='category_menu', message=message)
+        uz_object.show_categories()
+    elif show_config_value('step', message=message) == 'settings' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='main_menu', message=message)
+        uz_object.main_menu()
+    elif show_config_value('step', message=message) == 'new_phone_set' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.show_settings()
+    elif show_config_value('step', message=message) == 'confirm_phone_change' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.show_settings()
+    elif show_config_value('step', message=message) == 'new_location_set' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.show_settings()
+    elif show_config_value('step', message=message) == 'basket_look' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='main_menu', message=message)
+        uz_object.main_menu()
+    elif show_config_value('step', message=message) == 'order_step_1' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='basket_look', message=message)
+        uz_object.show_basket(cart=show_config_value(key='cart', message=message))
+    elif show_config_value('step', message=message) == 'order_step_2' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='order_step_1', message=message)
+        uz_object.confirm_change_phone(phone=show_config_value(key='phone_number', message=message))
+    elif show_config_value('step', message=message) == 'order_step_3' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='order_step_2', message=message)
+        uz_object.confirm_change_location(location=show_config_value(key='location', message=message))
 
 
 @bot.message_handler(content_types=['contact'])

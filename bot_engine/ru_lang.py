@@ -261,7 +261,7 @@ class Russian:
 
     # Language settings section
     def confirm_change_language(self):
-        buttons = ['🇷🇺 Оставить русский', '🇺🇿 Изменить на O\'zbek']
+        buttons = ['🇷🇺 Оставить русский', '🇺🇿 O\'zbek tiliga o\'tqazish']
         msg = 'У вас установлен язык: 🇷🇺 Русский'
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(buttons[0])
