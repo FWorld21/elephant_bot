@@ -132,7 +132,6 @@ def del_item_from_basket(item, message, lang):
             return product
 
 
-
 @bot.message_handler(commands=["start"])
 def start(message):
     buttons = ['🇷🇺 Русский', '🇺🇿 O\'zbek']
@@ -294,7 +293,8 @@ def get_msg_from_user(message):
             ru_object.confirm_change_location(location=show_config_value(key='location', message=message))
         else:
             ru_object.ask_new_location()
-    elif msg_from_user != '◀ Назад' and show_config_value(key='step', message=message) == 'order_step_1' \
+    elif show_config_value(key='language', message=message) == 'ru' and \
+            msg_from_user != '◀ Назад' and show_config_value(key='step', message=message) == 'order_step_1' \
             and len(msg_from_user) > 6 or show_config_value(key='step', message=message) == 'order_step_1' \
             and len(msg_from_user) > 6 and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user != '◀ Назад':
@@ -329,7 +329,56 @@ def get_msg_from_user(message):
         set_config_value(key='step', value='order_step_3', message=message)
         ru_object.confirm_order(cart=show_config_value(key='cart', message=message))
 
-
+    if msg_from_user == '🗒 Buyurtma yuborish' and show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'basket_look':
+        set_config_value(key='step', value='order_step_1', message=message)
+        if show_config_value(key='phone_number', message=message):
+            uz_object.confirm_change_phone(phone=show_config_value(key='phone_number', message=message))
+        else:
+            uz_object.ask_new_phone()
+    elif msg_from_user == '📱 Ohirgi belgilangan telefon raqamini yuborish' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'order_step_1':
+        set_config_value(key='step', value='order_step_2', message=message)
+        if show_config_value(key='location', message=message)['lat'] is not None:
+            uz_object.confirm_change_location(location=show_config_value(key='location', message=message))
+        else:
+            uz_object.ask_new_location()
+    elif show_config_value(key='language', message=message) == 'uz' and \
+            msg_from_user != '◀ Orqaga' and show_config_value(key='step', message=message) == 'order_step_1' \
+            and len(msg_from_user) > 6 or show_config_value(key='step', message=message) == 'order_step_1' \
+            and len(msg_from_user) > 6 and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user != '◀ Orqaga':
+        try:
+            phone = int(msg_from_user)
+            set_config_value(key='phone_number', value=phone, message=message)
+            set_config_value(key='step', value='order_step_2', message=message)
+            uz_object.save_phone()
+            if show_config_value(key='location', message=message)['lat'] is not None:
+                uz_object.confirm_change_location(location=show_config_value(key='location', message=message))
+            else:
+                uz_object.ask_new_location()
+        except ValueError:
+            uz_object.show_invalid_phone()
+    elif show_config_value(key='step', message=message) == 'order_step_1' and len(msg_from_user) < 9 \
+            and show_config_value(key='language', message=message) == 'uz' and msg_from_user != '◀ Orqaga':
+        uz_object.show_invalid_phone()
+    elif msg_from_user == '🗺 Ohirgi belgilangan joylashuvni yuborish' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'order_step_2':
+        set_config_value(key='step', value='order_step_3', message=message)
+        uz_object.confirm_order(cart=show_config_value(key='cart', message=message))
+    elif msg_from_user == '💭 Buyurtmaga izoh qoldirish' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'order_step_3':
+        set_config_value(key='step', value='leave_comment', message=message)
+        uz_object.wait_for_comment()
+    elif show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'leave_comment':
+        set_config_value(key='comment', value=msg_from_user, message=message)
+        uz_object.comment_saved()
+        set_config_value(key='step', value='order_step_3', message=message)
+        uz_object.confirm_order(cart=show_config_value(key='cart', message=message))
 
     # Info section
     if msg_from_user == '❔ Информация' and show_config_value(key='step', message=message) == 'main_menu' \
@@ -408,7 +457,6 @@ def get_msg_from_user(message):
         except ValueError:
             uz_object.show_invalid_phone()
 
-
     # Settings sub-section: Address
     if msg_from_user == '🗺 Адрес' and show_config_value(key='step', message=message) == 'settings' \
             and show_config_value(key='language', message=message) == 'ru':
@@ -449,13 +497,31 @@ def get_msg_from_user(message):
             and show_config_value(key='language', message=message) == 'ru':
         set_config_value(key='step', value='settings', message=message)
         ru_object.show_settings()
-    elif msg_from_user == '🇺🇿 Изменить на O\'zbek' \
+    elif msg_from_user == '🇺🇿 O\'zbek tiliga o\'tqazish' \
             and show_config_value(key='step', message=message) == 'change_language' \
             and show_config_value(key='language', message=message) == 'ru':
         set_config_value(key='step', value='settings', message=message)
         set_config_value(key='language', value='uz', message=message)
+        burn_basket(message=message)
         ru_object.success_change_language_to_uzb()
-        # uz_object.main_menu()
+        uz_object.show_settings()
+
+    if msg_from_user == '🇺🇿 Til' and show_config_value(key='language', message=message) == 'uz':
+        set_config_value(key='step', value='change_language', message=message)
+        uz_object.confirm_change_language()
+    elif msg_from_user == '🇺🇿 Tanlangan tilni qoldirish' \
+            and show_config_value(key='step', message=message) == 'change_language' \
+            and show_config_value(key='language', message=message) == 'uz':
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.show_settings()
+    elif msg_from_user == '🇷🇺 Изменить на Русский' \
+            and show_config_value(key='step', message=message) == 'change_language' \
+            and show_config_value(key='language', message=message) == 'uz':
+        set_config_value(key='step', value='settings', message=message)
+        set_config_value(key='language', value='ru', message=message)
+        burn_basket(message=message)
+        uz_object.success_change_language_to_ru()
+        ru_object.show_settings()
 
     # Go back section
     if show_config_value('step', message=message) == 'category_menu' \
@@ -566,20 +632,14 @@ def contact_handler(message):
     if show_config_value(key='language', message=message) == 'ru' \
             and show_config_value(key='step', message=message) == 'new_phone_set':
         ru_object = Russian(bot=bot, message=message)
-        if show_config_value(key='step', message=message) == 'new_phone_set':
-            set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
-            set_config_value(key='step', value='settings', message=message)
-            ru_object.save_phone()
-            ru_object.show_settings()
-    if show_config_value(key='language', message=message) == 'ru' \
+        set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        ru_object.save_phone()
+        ru_object.show_settings()
+    elif show_config_value(key='language', message=message) == 'ru' \
             and show_config_value(key='step', message=message) == 'order_step_1':
         ru_object = Russian(bot=bot, message=message)
-        if show_config_value(key='step', message=message) == 'new_phone_set':
-            set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
-            set_config_value(key='step', value='settings', message=message)
-            ru_object.save_phone()
-            ru_object.show_settings()
-        elif show_config_value(key='step', message=message) == 'order_step_1':
+        if show_config_value(key='step', message=message) == 'order_step_1':
             set_config_value(key='step', value='order_step_2', message=message)
             set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
             ru_object.save_phone()
@@ -587,6 +647,39 @@ def contact_handler(message):
                 ru_object.confirm_change_location(location=show_config_value(key='location', message=message))
             else:
                 ru_object.ask_new_location()
+    elif show_config_value(key='step', message=message) == 'confirm_phone_change' and \
+            show_config_value(key='language', message=message) == 'ru':
+        ru_object = Russian(bot=bot, message=message)
+        set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        ru_object.save_phone()
+        ru_object.show_settings()
+
+    elif show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'new_phone_set':
+        uz_object = Uzbek(bot=bot, message=message)
+        set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.save_phone()
+        uz_object.show_settings()
+    elif show_config_value(key='language', message=message) == 'uz' \
+            and show_config_value(key='step', message=message) == 'order_step_1':
+        uz_object = Uzbek(bot=bot, message=message)
+        if show_config_value(key='step', message=message) == 'order_step_1':
+            set_config_value(key='step', value='order_step_2', message=message)
+            set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
+            uz_object.save_phone()
+            if show_config_value(key='location', message=message)['lat'] is not None:
+                uz_object.confirm_change_location(location=show_config_value(key='location', message=message))
+            else:
+                uz_object.ask_new_location()
+    elif show_config_value(key='step', message=message) == 'confirm_phone_change' and \
+            show_config_value(key='language', message=message) == 'uz':
+        uz_object = Uzbek(bot=bot, message=message)
+        set_config_value(key='phone_number', value=message.contact.phone_number, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.save_phone()
+        uz_object.show_settings()
 
 
 @bot.message_handler(content_types=['location'])
@@ -598,14 +691,42 @@ def location_handler(message):
         set_config_value(key='step', value='settings', message=message)
         ru_object.save_location()
         ru_object.show_settings()
-
-    if show_config_value(key='language', message=message) == 'ru' and \
+    elif show_config_value(key='language', message=message) == 'ru' and \
             show_config_value(key='step', message=message) == 'order_step_2':
         ru_object = Russian(bot=bot, message=message)
         set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
         set_config_value(key='step', value='order_step_3', message=message)
         ru_object.save_location()
         ru_object.confirm_order(cart=show_config_value(key='cart', message=message))
+    elif show_config_value(key='language', message=message) == 'ru' and \
+            show_config_value(key='step', message=message) == 'confirm_location_change':
+        ru_object = Russian(bot=bot, message=message)
+        set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        ru_object.save_location()
+        ru_object.show_settings()
+
+    if show_config_value(key='language', message=message) == 'uz' and \
+            show_config_value(key='step', message=message) == 'new_location_set':
+        uz_object = Uzbek(bot=bot, message=message)
+        set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.save_location()
+        uz_object.show_settings()
+    elif show_config_value(key='language', message=message) == 'uz' and \
+            show_config_value(key='step', message=message) == 'order_step_2':
+        uz_object = Uzbek(bot=bot, message=message)
+        set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
+        set_config_value(key='step', value='order_step_3', message=message)
+        uz_object.save_location()
+        uz_object.confirm_order(cart=show_config_value(key='cart', message=message))
+    elif show_config_value(key='language', message=message) == 'uz' and \
+            show_config_value(key='step', message=message) == 'confirm_location_change':
+        uz_object = Uzbek(bot=bot, message=message)
+        set_location_value(lat=message.location.latitude, long=message.location.longitude, message=message)
+        set_config_value(key='step', value='settings', message=message)
+        uz_object.save_location()
+        uz_object.show_settings()
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -617,6 +738,12 @@ def callback_handler(call):
             add_to_basket(product=call.data[:-1], count=call.data[-1], message=call.message)
             set_config_value(key='step', value='category_menu', message=call.message)
             ru_object.added_to_basket(product=call.data[:-1])
+        elif show_config_value(key='language', message=call.message) == 'uz' \
+                and show_config_value(key='step', message=call.message) == 'product_preview':
+            uz_object = Uzbek(bot=bot, message=call.message)
+            add_to_basket(product=call.data[:-1], count=call.data[-1], message=call.message)
+            set_config_value(key='step', value='category_menu', message=call.message)
+            uz_object.added_to_basket(product=call.data[:-1])
 
 
 bot.polling()

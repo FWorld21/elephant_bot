@@ -15,4 +15,3 @@ class DBContent:
         self.cursor.execute('SELECT * FROM bot_content_product')
         rows_products = self.cursor.fetchall()
         return rows_products
-

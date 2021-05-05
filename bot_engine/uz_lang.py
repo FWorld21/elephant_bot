@@ -213,11 +213,11 @@ class Uzbek:
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, reply_markup=markup)
 
     def show_invalid_phone(self):
-        msg = 'Вы ввели некорректный номер телефона'
+        msg = 'Siz noto\'g\'ri telefon raqamni kiritdingiz'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     def save_phone(self):
-        msg = 'Ваш номер телефона успешно установлен'
+        msg = 'Sizning telefon raqamingiz muvvafaqiyatli kiritildi'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     def ask_new_phone(self):
@@ -254,9 +254,9 @@ class Uzbek:
     def save_location(self):
         geolocator = Nominatim(user_agent="elephant_bot")
         location = geolocator.reverse(f'{self.message.location.latitude}, {self.message.location.longitude}')
-        msg = f'Ваша локация, по адресу:' \
-              f'\n<b>{location.address}</b>' \
-              f'\nуспешно установлена'
+        msg = f'Manzil muvvafaqiyatli kiritildi!' \
+              f'Sizning manzilingiz:' \
+              f'\n<b>{location.address}</b>'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, parse_mode='html')
 
     # Language settings section
@@ -268,6 +268,6 @@ class Uzbek:
         markup.add(buttons[1])
         self.bot.send_message(chat_id=self.message.chat.id, text=msg, reply_markup=markup)
 
-    def success_change_language_to_uzb(self):
-        msg = 'O\'zbek tili muvvafaqiyatli tanlandi'
+    def success_change_language_to_ru(self):
+        msg = 'Язык успешно изменён!'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
