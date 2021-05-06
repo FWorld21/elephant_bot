@@ -74,7 +74,8 @@ class Uzbek:
                               f'<i>{product["uz_desc"]}</i>' \
                               f'\n\n' \
                               f'<b>{product["price"]}</b> s\'om'
-                    markup = telebot.types.ReplyKeyboardRemove()
+                    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                    markup.add('◀ Orqaga')
                     self.bot.send_photo(chat_id=self.message.chat.id, photo=photo, reply_markup=markup,
                                         caption=caption, parse_mode='html')
                     msg = 'Ovqat miqdorini tanlang, yoki qo\'lda kiriting'
@@ -180,16 +181,22 @@ class Uzbek:
         msg = 'Sizning izohingiz muvaffaqiyatli saqlanadi'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
+    def ordered(self):
+        msg = 'Raxmat! Sizning buyurtmangiz qabul qilindi va 5 minut ichida biz siz bilan bog\'lanamiz!'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg)
+
     # Contacts section
     def show_contacts(self):
-        msg = ''
-        pass
+        msg = 'Buyurtma berish uchun shu raqamlarga qo\'ng\'iroq qilishingiz mumkin: \n' \
+              '☎ +998 90 0434388\n' \
+              '☎ +998 90 0434399'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     # About restaurant info
     def show_info(self):
-        msg = '🕘 Часы работы зведения и службы доставки: ежедневно, 9:00 - 2:00 (без выходных);'\
-              '\n\n👲🏼 Стоимость доставки по Ташкенту - 20 000 сум;'\
-              '\n\n📍Наш адрес: г.Ташкент, Миробадский р-н, ул.Бадахшон, 5;'
+        msg = '🕘Ish vaqti: har kuni, 9:00-2:00 (dam olish kunlarsiz);'\
+              '\n\n👲🏼 Yetkazib berish xizmati - Toshkent bo\'ylab 20 000 so\'m;'\
+              '\n\n📍Bizning manzil: Toahkent sh., Mirobod tumani, Badaxshon ko\'chasi, 5;'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     def show_settings(self):

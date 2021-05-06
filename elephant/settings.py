@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -120,7 +122,7 @@ USE_TZ = True
 
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'shop/static/'
+    BASE_DIR / 'elephant/static/'
 ]
 
 STATIC_URL = '/static/'

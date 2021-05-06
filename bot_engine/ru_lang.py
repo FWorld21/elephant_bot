@@ -74,7 +74,8 @@ class Russian:
                               f'<i>{product["ru_desc"]}</i>' \
                               f'\n\n' \
                               f'<b>{product["price"]}</b> сум'
-                    markup = telebot.types.ReplyKeyboardRemove()
+                    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                    markup.add('◀ Назад')
                     self.bot.send_photo(chat_id=self.message.chat.id, photo=photo, reply_markup=markup,
                                         caption=caption, parse_mode='html')
                     msg = 'Выберите количество блюда, или введите его вручную'
@@ -180,10 +181,16 @@ class Russian:
         msg = 'Ваш коментарий успешно сохранён'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
+    def ordered(self):
+        msg = 'Спасибо! Ваш заказ принят и отпрален на обработку, в течение 5 минут на менеджер свяжется с Вами!'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg)
+
     # Contacts section
     def show_contacts(self):
-        msg = ''
-        pass
+        msg = 'Для заказа Вы можете обращаться по номерам: \n' \
+              '☎ +998 90 0434388\n' \
+              '☎ +998 90 0434399'
+        self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     # About restaurant info
     def show_info(self):
@@ -271,3 +278,34 @@ class Russian:
     def success_change_language_to_uzb(self):
         msg = 'O\'zbek tili muvvafaqiyatli tanlandi'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
+
+    def send_order_to_moder(self, cart):
+        products_with_price = {
+            # Product: Price
+        }
+        for cart_product in cart:
+            for product in self.products:
+                if cart_product == product['ru_name']:
+                    products_with_price[cart_product] = product['price']
+        ended_amount = 0
+        basket_msg = 'Корзина:\n\n'
+        for product, price in products_with_price.items():
+            basket_msg += f'<i>{product}</i>\n' \
+                        f'<i>{cart[product]} x {price} = {str(int(cart[product]) * int(price))}</i>\n'
+            ended_amount += int(cart[product]) * int(price)
+
+        with open('./bot_settings/admin_chat_id.txt', 'r') as chat_id:
+            moder_chat = chat_id.read()
+        with open(f'./users_files/{self.message.chat.id}/config.json', 'r') as config_file_r:
+            data = json.load(config_file_r)
+        msg = f'Внимание! Новый заказ!\n\n' \
+              f'<b>Username:</b> {data["username"] if data["username"] else "Нет"}\n' \
+              f'<b>Имя:</b> {data["name"]}\n' \
+              f'<b>Язык:</b> {"Русский" if data["language"] == "ru" else "Узбекский"}\n' \
+              f'<b>Номер телефона:</b> {data["phone_number"]}\n' \
+              f'{basket_msg}\n' \
+              f'<b>Коментарий:</b> {data["comment"] if data["comment"] else "Нет"}\n' \
+              f'<b>Итоговая сумма заказа:</b> <b>{ended_amount}</b>\n\n' \
+              f'<b>Локация:</b>'
+        self.bot.send_message(chat_id=moder_chat, text=msg, parse_mode='html')
+        self.bot.send_location(chat_id=moder_chat, latitude=data['location']['lat'], longitude=data['location']['long'])

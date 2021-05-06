@@ -223,6 +223,9 @@ def get_msg_from_user(message):
     if msg_from_user == '☎ Контакты' and show_config_value(key='step', message=message) == 'main_menu' \
             and show_config_value(key='language', message=message) == 'ru':
         ru_object.show_contacts()
+    if msg_from_user == '☎ Mening telefon raqamim' and show_config_value(key='step', message=message) == 'main_menu' \
+            and show_config_value(key='language', message=message) == 'uz':
+        uz_object.show_contacts()
 
     # Basket section
     if msg_from_user == '🛒 Корзина' and show_config_value(key='step', message=message) == 'main_menu' \
@@ -380,10 +383,21 @@ def get_msg_from_user(message):
         set_config_value(key='step', value='order_step_3', message=message)
         uz_object.confirm_order(cart=show_config_value(key='cart', message=message))
 
+    if msg_from_user == '✅ Подтверить заказ' and show_config_value(key='language', message=message) == 'ru' \
+            and show_config_value(key='step', message=message) == 'order_step_3':
+        ru_object.send_order_to_moder(cart=show_config_value(key='cart', message=message))
+        set_config_value(key='step', value='main_menu', message=message)
+        burn_basket(message=message)
+        ru_object.ordered()
+        ru_object.main_menu()
+
     # Info section
     if msg_from_user == '❔ Информация' and show_config_value(key='step', message=message) == 'main_menu' \
             and show_config_value(key='language', message=message) == 'ru':
         ru_object.show_info()
+    elif msg_from_user == '❔ Ma\'lumot' and show_config_value(key='step', message=message) == 'main_menu' \
+            and show_config_value(key='language', message=message) == 'uz':
+        uz_object.show_info()
 
     # Settings section
     if msg_from_user == '🎛 Настройки' and show_config_value(key='step', message=message) == 'main_menu' \
@@ -534,6 +548,11 @@ def get_msg_from_user(message):
             and msg_from_user == '◀ Назад':
         set_config_value(key='step', value='category_menu', message=message)
         ru_object.show_categories()
+    elif show_config_value('step', message=message) == 'product_preview' \
+            and show_config_value(key='language', message=message) == 'ru' \
+            and msg_from_user == '◀ Назад':
+        set_config_value(key='step', value='product_menu', message=message)
+        ru_object.show_products(_category=show_config_value(key='selected_category', message=message))
     elif show_config_value('step', message=message) == 'settings' \
             and show_config_value(key='language', message=message) == 'ru' \
             and msg_from_user == '◀ Назад':
@@ -585,6 +604,11 @@ def get_msg_from_user(message):
             and msg_from_user == '◀ Orqaga':
         set_config_value(key='step', value='category_menu', message=message)
         uz_object.show_categories()
+    elif show_config_value('step', message=message) == 'product_preview' \
+            and show_config_value(key='language', message=message) == 'uz' \
+            and msg_from_user == '◀ Orqaga':
+        set_config_value(key='step', value='product_menu', message=message)
+        uz_object.show_products(_category=show_config_value(key='selected_category', message=message))
     elif show_config_value('step', message=message) == 'settings' \
             and show_config_value(key='language', message=message) == 'uz' \
             and msg_from_user == '◀ Orqaga':
