@@ -188,15 +188,14 @@ class Uzbek:
     # Contacts section
     def show_contacts(self):
         msg = 'Buyurtma berish uchun shu raqamlarga qo\'ng\'iroq qilishingiz mumkin: \n' \
-              '☎ +998 90 0434388\n' \
-              '☎ +998 90 0434399'
+              '☎ +998 97 7232888'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     # About restaurant info
     def show_info(self):
         msg = '🕘Ish vaqti: har kuni, 9:00-2:00 (dam olish kunlarsiz);'\
               '\n\n👲🏼 Yetkazib berish xizmati - Toshkent bo\'ylab 20 000 so\'m;'\
-              '\n\n📍Bizning manzil: Toahkent sh., Mirobod tumani, Badaxshon ko\'chasi, 5;'
+              '\n\n📍Bizning manzil: Manzil: Mirobod tumani, Badaxshon ko\'chasi 786(A), ikkinchi yo\'lak. Orientir - Kompas savdo markaziga 3 avtobus bekati yetmasdan;'
         self.bot.send_message(chat_id=self.message.chat.id, text=msg)
 
     def show_settings(self):
